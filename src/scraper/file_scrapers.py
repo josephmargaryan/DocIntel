@@ -1,5 +1,5 @@
 # src/scraper/file_scrapers.py
-
+import os
 import fitz  # PyMuPDF
 import docx
 from io import BytesIO
@@ -21,8 +21,11 @@ class PDFScraper(BaseScraper):
                     pix.save("temp_image.png")
                     ocr_text = self.ocr_engine.perform_ocr("temp_image.png")
                     text += ocr_text
+                    # Optionally, remove the temporary image file
+                    os.remove("temp_image.png")
         doc.close()
-        return Document(text)
+        return Document(text, file_path=filepath)  # Pass file_path
+
 
 class DocxScraper(BaseScraper):
     def scrape(self, filepath: str) -> Document:
