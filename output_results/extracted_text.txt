@@ -1,0 +1,886 @@
+Profile hidden Markov models
+%  -
+'(*$%* & %*") )!"% *&% %",()"*- !&&# & ""%
+	
+
+ &** ,%+ * &+")  
+ 
+    	   
+  	   
+  
+Abstract
+Summary: The recent literature on profile hidden Markov
+model (profile HMM) methods and software is reviewed.
+Profile HMMs turn a multiple sequence alignment into a
+position-specific scoring system suitable for searching
+databases for remotely homologous sequences. Profile
+HMM analyses complement standard pairwise comparison
+methods for large-scale sequence analysis. Several software
+implementations and two large libraries of profile HMMs of
+common protein domains are available. HMM methods
+performed comparably to threading methods in the CASP2
+structure prediction exercise.
+Contact: eddy@genetics.wustl.edu
+Introduction
+Proteins, RNAs and other features in genomes can usually be
+classified into families of related sequences and structures
+(Henikoff et al., 1997). Different residues in a functional se-
+quence are subject to different selective pressures. Multiple
+alignments of a sequence family reveal this in their pattern
+of conservation. Some positions are more conserved than
+others, and some regions of a multiple alignment seem to
+tolerate insertions and deletions more than other regions.
+Intuitively, it seems desirable to use position-specific in-
+formation from multiple alignments when searching data-
+bases for homologous sequences. ‘Profile’ methods for
+building position-specific scoring models from multiple
+alignments were introduced for this purpose (Taylor, 1986;
+Gribskov et al., 1987; Barton, 1990; Henikoff, 1996). How-
+ever, profiles have been less used than pairwise methods like
+BLAST (Altschul et al., 1990, 1997) and FASTA (Pearson
+and Lipman, 1988), with the most notable exceptions being
+the popular BLOCKS database (Henikoff et al., 1998) and
+the skilled use of profiles by a small band of professional
+protein domain hunters (Bork and Gibson, 1996).
+In part, this is because the residue scoring systems used by
+pairwise alignment methods are supported by a significant
+body of statistical theory (Altschul and Gish, 1996). The pro-
+babilistic ‘meaning’ of position-independent pairwise align-
+ment scoring matrices is well understood (Altschul, 1991),
+allowing powerful scoring matrices to be derived (Henikoff
+and Henikoff, 1992). The statistical significance of un-
+gapped pairwise alignment scores can be calculated analyti-
+cally, and the significance of gapped alignment scores can be
+calculated by simple empirical procedures (Altschul and
+Gish, 1996; Altschul et al., 1997). In contrast, profile
+methods have historically used ad hoc scoring systems.
+Some mathematical theory was desirable for the meaning
+and derivation of the scores in a model as complex as a pro-
+file (Henikoff, 1996).
+Hidden Markov models (HMMs) now provide a coherent
+theory for profile methods. HMMs are a class of probabilistic
+models that are generally applicable to time series or linear
+sequences. HMMs have been most widely applied to recog-
+nizing words in digitized sequences of the acoustics of
+human speech (Rabiner, 1989). HMMs were introduced into
+computational biology in the late 1980s (Churchill, 1989),
+and for use as profile models just a few years ago (Krogh et
+al., 1994a).
+Here, the recent literature on profile HMM methods and
+related methods for modeling sequence families is reviewed.
+Preference is given to papers appearing in the past 2 years,
+since my last review of the field (Eddy, 1996). There seem
+to be three principal advances. First, motif-based HMMs
+have been introduced as an alternative to the original Krogh/
+Haussler profile HMM architecture (Grundy et al., 1997;
+Neuwald et al., 1997). Second, large libraries of profile
+HMMs and multiple alignments have become available, as
+well as compute servers to search query sequences against
+these resources (Sonnhammer et al., 1998). Third, there has
+been an increasing incursion of profile HMM methods into
+the area of protein structure prediction by fold recognition
+(Levitt, 1997).
+Because of space limitations, some of the background I
+give is terse. A satisfactory introduction to HMMs and pro-
+babilistic models is beyond the scope of this review. Tutorial
+introductions to HMMs are available (Rabiner, 1989), in-
+cluding introductions that specifically include profile HMM
+methods (Krogh, 1998). Two recent books describe proba-
+bilistic modeling methods for biological sequence analysis in
+detail (Baldi and Brunak, 1998; Durbin et al., 1998).
+Hidden Markov models
+There are now various kinds of profile HMMs and related
+models, all based on HMM theory. It is useful to understand
+&#  %&  
+ ) 		
+
+755
+ Oxford University Press
+BIOINFORMATICS REVIEW
+S.R.Eddy
+756
+the generality and relative simplicity of HMM theory before
+considering the special case of profile HMMs. An HMM de-
+scribes a probability distribution over a potentially infinite
+number of sequences. Because a probability distribution
+must sum to one, the ‘scores’ that an HMM assigns to se-
+quences are constrained. The probability of one sequence
+cannot be increased without decreasing the probability of
+one or more other sequences. It is this fundamental constraint
+of probabilistic modeling (Jaynes, 1998) that allows the
+parameters in an HMM to have non-trivial optima.
+An example of a simple HMM that models sequences
+composed of two letters (a, b) is shown in Figure 1. This toy
+HMM would be an appropriate model for a problem in which
+we thought sequences started with one residue composition
+(a-rich, perhaps), then switched once to a different residue
+composition (b-rich, perhaps). The HMM consists of two
+states connected by state transitions. Each state has a symbol
+emission probability distribution for generating (matching)
+a symbol in the alphabet. It is convenient to think of an HMM
+as a model that generates sequences. Starting in an initial
+state, we choose a new state with some transition probability
+(either staying in state 1 with transition probability t1,1, or
+moving to state 2 with transition probability t1,2); then we
+generate a residue with an emission probability specific to
+that state [e.g. choosing an a with p1(a)]. We repeat the transi-
+tion/emission process until we reach an end state. At the end
+of this process, we have a hidden state sequence that we do
+not observe, and a symbol sequence that we do observe.
+The name ‘hidden Markov model’ comes from the fact that
+the state sequence is a first-order Markov chain, but only the
+symbol sequence is directly observed. The states of the
+HMM are often associated with meaningful biological la-
+bels, such as ‘structural position 42’. In our toy HMM, for
+instance, states 1 and 2 correspond to a biological notion of
+two sequence regions with differing residue composition. In-
+ferring the alignment of the observed protein or DNA se-
+quence to the hidden state sequence is like labeling the se-
+quence with relevant biological information.
+Once an HMM is drawn, regardless of its complexity, the
+same standard dynamic programming algorithms can be
+used for aligning and scoring sequences with the model
+(Durbin et al., 1998). These algorithms, called Forward (for
+scoring) and Viterbi (for alignment), have a worst-case algo-
+rithmic complexity of O(NM2) in time and O(NM) in space
+for a sequence of length N and an HMM of M states. For
+profile HMMs that have a constant number of state transi-
+tions per state rather than the vector of M transitions per state
+in fully connected HMMs, both algorithms run in O(NM)
+time and O(NM) space—not coincidentally, identical to
+other sequence alignment dynamic programming algo-
+rithms. For a modest (constant) penalty in time, very mem-
+ory-efficient O(M) and O(M1.5) versions of Viterbi and For-
+Fig. 1. A toy HMM, modeling sequences of as and bs as two regions
+of potentially different residue composition. The model is drawn
+(top) with circles for states and arrows for state transitions. A
+possible state sequence generated from the model is shown, followed
+by a possible symbol sequence. The joint probability P(x,π|HMM)
+of the symbol sequence and the state sequence is a product of all the
+transition and emission probabilities. Notice that another state
+sequence (1-2-2) could have generated the same symbol sequence,
+though probably with a different total probability. This is the
+distinction between HMMs and a standard Markov model with
+nothing to hide: in an HMM, the state sequence (e.g. the biologically
+meaningful alignment) is not uniquely determined by the observed
+symbol sequence, but must be inferred probabilistically from it.
+ward can also be implemented (Hughey and Krogh, 1996;
+Tarnas and Hughey, 1998).
+Parameters can be set for an HMM in two ways. An HMM
+can be trained from initially unaligned (unlabeled) se-
+quences. Alternatively, an HMM can be built from pre-
+aligned (pre-labeled) sequences (i.e. where the state paths are
+assumed to be known). In the latter case, the parameter es-
+timation problem is simply a matter of converting observed
+counts of symbol emissions and state transitions into prob-
+abilities. In building a profile HMM, an existing multiple
+alignment is given as input. In contrast, training a profile
+HMM is analogous to running a multiple alignment program
+before building the model, and thus is a harder problem.
+Training algorithms are of interest because we may not yet
+know a plausible alignment for the sequences in question.
+The standard HMM training algorithms are Baum–Welch
+expectation maximization or gradient descent algorithms.
+Gibbs sampling, simulated annealing and genetic algorithm
+training methods seem better at avoiding spurious local opti-
+ma in training HMMs and HMM-like models (Eddy, 1996;
+Neuwald et al., 1997; Durbin et al., 1998). Most training al-
+gorithms seek relatively simple maximum likelihood (or
+maximum a posteriori) optimization targets. More sophisti-
+cated optimization targets are used to compensate for non-
+2,2
+
+tho bb end HMM
+
+p,(a) P2(a)
+
+p,(b) Pa(b)
+
+1- » 1—» 2+ end hidden state sequence, x
+Sah eed einen teeateieeee
+a b a observed symbol sequence, x
+
+tha bie teenad P1(@) Py(b) Po(a) = P(x, | HMM)
+Profile hidden Markov models
+757
+independence of example sequences (e.g. biased representa-
+tion) (Eddy, 1996; Bruno, 1996; Durbin et al., 1998; Karchin
+and Hughey, 1998; Sunyaev et al., 1998), or to maximize the
+ability of a model to discriminate a set of true positive
+example sequences from a set of true negative training
+examples (Mamitsuka, 1996).
+However, since HMM training algorithms are local optim-
+izers, it pays to build HMMs on pre-aligned data whenever
+possible. Especially for complicated HMMs, the parameter
+space may be complex, with many spurious local optima that
+can trap a training algorithm.
+In contrast to parameter estimation, a suitable HMM archi-
+tecture (the number of states, and how they are connected by
+state transitions) must usually be designed by hand. A maxi-
+mum likelihood architecture construction algorithm exists
+for the special case of building profile HMMs from multiple
+alignments (Durbin et al., 1998). Efforts have been made to
+develop architecture learning algorithms for general HMMs
+(Yada et al., 1996). One can also train fully connected
+HMMs and prune low-probability transitions at the end of
+training (Mamitsuka, 1996).
+More or less formal probabilistic models are increasingly
+important in biological analysis, particularly in complicated
+analysis problems with many model parameters. Because
+many problems in computational biology reduce to some
+sort of linear ‘sequence’ analysis, probabilistic models based
+on HMMs have been applied to many problems. Other bio-
+logical applications of HMMs include gene finding (Krogh
+et al., 1994b; Kulp et al., 1996; Burge and Karlin, 1997; Hen-
+derson et al., 1997; Krogh, 1997; Lukashin and Borodovsky,
+1998), radiation hybrid mapping (Slonim et al., 1997), gen-
+etic linkage mapping (Kruglyak et al., 1996), phylogenetic
+analysis (Felsenstein and Churchill, 1996; Thorne et al.,
+1996) and protein secondary structure prediction (Asai et al.,
+1993; Goldman et al., 1996). In general, the more a problem
+resembles a linear sequence analysis problem—i.e. the less
+it depends on correlations between ‘observables’ (e.g. resi-
+dues)—the more useful HMM approaches will be. Profile
+HMMs and HMM-based gene finders have probably been
+the most successful applications of HMMs in computational
+biology. On the other hand, protein secondary structure pre-
+diction is an area in which the state of the art is neural net
+methods that outperform HMM methods by using extensive
+local correlation information that is not necessarily easy to
+model in an HMM (Rost and Sander, 1993).
+Profile HMMs
+Krogh et al. (1994a) introduced an HMM architecture that
+was well suited for representing profiles of multiple se-
+quence alignments. For each consensus column of the mul-
+tiple alignment, a ‘match’ state models the distribution of
+residues allowed in the column. An ‘insert’ state and ‘delete’
+Fig. 2. A small profile HMM (right) representing a short multiple
+alignment of five sequences (left) with three consensus columns.
+The three columns are modeled by three match states (squares
+labeled m1, m2 and m3), each of which has 20 residue emission
+probabilities, shown with black bars. Insert states (diamonds labeled
+i0–i3) also have 20 emission probabilities each. Delete states (circles
+labeled d1–d3) are ‘mute’ states that have no emission probabilities.
+A begin and end state are included (b,e). State transition probabilities
+are shown as arrows.
+state at each column allow for insertion of one or more resi-
+dues between that column and the next, or for deleting the
+consensus residue. Profile HMMs are strongly linear, left–
+right models, unlike the general HMM case. Figure 2 shows
+a small profile HMM corresponding to a short multiple se-
+quence alignment.
+The probability parameters in a profile HMM are usually
+converted to additive log-odds scores before aligning and
+scoring a query sequence (Barrett et al., 1997). The scores for
+aligning a residue to a profile match state are therefore com-
+parable to the derivation of BLAST or FASTA scores: if the
+probability of the match state emitting residue x is px, and the
+expected background frequency of residue x in the sequence
+database is fx, the score for residue x at this match state is log
+px/fx.
+For other scores, profile HMM treatment diverges from
+standard sequence alignment scoring. In traditional gapped
+alignment, an insert of x residues is typically scored with an
+affine gap penalty, a + b(x – 1), where a is the score for the
+first residue and b is the score for each subsequent residue in
+the insertion. In a profile HMM, for an insertion of length x
+there is a state transition into an insert state which costs log
+tMI (where tMI is the state transition probability for moving
+from the match state to the insert state), (x – 1) state transi-
+tions for each subsequent insert state that cost log tII, and a
+state transition for leaving the insert state that costs log tIM.
+This is akin to the traditional affine gap penalty, with the gap
+open cost as a = log tMI + log tIM, and the gap extend cost as
+b = log tII.
+However, in a profile HMM, these gap costs are not arbit-
+rary numbers. This is an example of why probabilistic mo-
+dels have useful and non-trivial optima. Imagine that we
+oOo us>uw>
+un COOQ>~e
+- OO0O00
+S.R.Eddy
+758
+were trying to optimize the gap parameters of a model by
+maximizing the score of the model on a training set of
+example sequences. In a profile with ad hoc gap costs, we
+could trivially maximize the scores just by setting all gap
+costs to zero, but the alignments produced by a profile with
+no gap penalties would be terrible. In the profile HMM, in
+contrast, the probability of a transition to an insert is linked
+to the probability of transition to a match and not inserting;
+profile HMMs have a cost for the match state to match state
+transition that has no counterpart in standard alignment. As
+we lower the gap cost by raising the transition probability tMI
+towards 1.0, the probability of the match–match transition
+tMM falls towards zero, and thus the cost for sequences with-
+out an insertion approaches negative infinity. There is, there-
+fore, a trade-off point in choosing the state transition prob-
+abilities where the cost for the sequences that do have an in-
+sertion is balanced against the cost for the sequences that do
+not.
+Additionally, the inserted residues are associated with in-
+sert state emission probabilities in the HMM. If these
+emission probabilities are the same as the background amino
+acid frequency, then the score of inserted residues is log
+fx/fx = 0. In traditional alignment, inserted residues also have
+no cost besides the affine gap penalty. The profile HMM for-
+malism forces us to see that this zero cost corresponds to an
+assumption that unconserved insertions in protein structures
+have the same residue distribution as proteins in general.
+However, the assumption is usually wrong. Insertions tend
+to be seen most often in surface loops of protein structures,
+and so have a bias towards hydrophilic residues. Profile
+HMMs can capture this information in the insert state
+emission distributions.
+Profile HMM software
+Several available software packages implement profile
+HMMs or HMM-like models (Table 1). One important dif-
+ference between these packages is the model architecture
+they adopt (Figure 3). The philosophical divide is between
+‘profile’ models and ‘motif’ models. By ‘profile’ models, I
+mean models with an insert and delete state associated with
+each match state, allowing insertion and deletion anywhere
+in a target sequence. By ‘motif’ models, I mean models
+dominated by strings of match states (modeling ungapped
+blocks of sequence consensus) separated by a small number
+of insert states modeling the spaces between ungapped
+blocks. 
+SAM (Hughey, 1996), HMMER (S.R.Eddy, unpublished),
+PFTOOLS (Bucher et al., 1996) and HMMpro (Baldi et al.,
+1994) implement models based at least in part on the original
+profile HMMs of Krogh et al. (1994a). These packages have
+Fig. 3. Different model architectures used in current methods. State
+transitions are shown as arrows and emission distributions are not
+represented. Numbered squares indicate ‘match states’. Diamonds
+indicate ‘insert states’. Match and insert states each have emission
+distributions over 4 or 20 possible nucleic or amino acid symbols.
+Circles indicate non-emitting delete states and other special non-
+emitting states such as begin and end states. From top to bottom:
+BLOCKS-style ungapped motifs, represented as an HMM; the
+multiple motif model in META-MEME; the original profile HMM
+of Krogh et al.; and the ‘Plan 7’ architecture of HMMER 2,
+representative of the new generation of profile HMM software in
+SAM, HMMER and PFTOOLS.
+augmented that simple model to deal with multiple domains,
+sequence fragments and local alignments, as illustrated by
+the HMMER 2.0 ‘Plan 7’ model architecture in Figure 3.
+Thus, local versus global alignment is not necessarily in-
+trinsic to the algorithm (as is usually thought, for instance, in
+the distinction between the global ‘Needleman/Wunsch’ and
+local ‘Smith/Waterman’ algorithms), but can be dealt with
+probabilistically as part of the model architecture. Local
+alignments with respect to the model are allowed by non-
+zero state transition probabilities from a begin state to inter-
+nal match states, and from internal match states to an end
+state (dotted lines in Figure 3). Local alignments with respect
+to the sequence are allowed by non-zero state transitions on
+the flanking insert states (shaded in the Plan 7 architecture in
+Figure 3). More than one hit to the HMM per sequence is
+allowed by a cycle of non-zero transitions through a third
+special insert state.
+O—-GFRFEFEFEFEF-O
+
+af
+O-GE+ELEF-AEHEREE SO
+
+BLOCKS
+
+META-MEME
+
+profile HMM
+
+HMMER2 "Plan 7"
+Profile hidden Markov models
+759
+Table 1. Internet sources for obtaining some of the existing profile HMM
+and HMM-like software packages
+Software
+URL
+SAM
+http://www.cse.ucsc.edu/research/compbio/sam.html
+HMMER
+http://hmmer.wustl.edu/
+PFTOOLS
+http://ulrec3.unil.ch:80/profile/
+HMMpro
+http://www.netid.com/
+GENEWISE
+http://www.sanger.ac.uk/Software/Wise2/
+PROBE
+ftp://ncbi.nlm.nih.gov/pub/neuwald/probe1.0/
+META-MEME
+http://www.cse.ucsd.edu/users/bgrundy/metameme.1.0.html
+BLOCKS
+http://www.blocks.fhcrc.org/
+PSI-BLAST
+http://www.ncbi.nlm.nih.gov/BLAST/newblast.html
+These profile HMMs are rather general, allowing inser-
+tions and deletions anywhere in a sequence relative to the
+consensus model. Intuitively, they should be more sensitive
+than ungapped models. However, in practice, there is a trade-
+off between increasing the descriptive power of the model
+and the difficulty in determining an increasingly large
+number of free parameters. A complex model is more prone
+to overfitting the training data and failing to generalize to
+other sequences. SAM and HMMER use mixture Dirichlet
+priors on most distributions to help avoid overfitting and to
+limit the effective number of free parameters (Sjolander,
+1996). It is possible to reduce the effective number of free
+parameters even further by adopting hybrid HMM/neural
+network techniques (Baldi and Chauvin, 1996). Nonethe-
+less, this relatively unconstrained freedom to insert and de-
+lete anywhere makes these models somewhat difficult to
+train from initially unaligned sequences. HMMER and
+PFTOOLS are used primarily to build database search mo-
+dels from pre-existing alignments, such as those in the Pfam
+and PROSITE Profiles databases (see below).
+PROBE (Neuwald et al., 1997), META-MEME (with its
+brethren MEME and MAST) (Grundy et al., 1997) and
+BLOCKS (Henikoff et al., 1998) assume quite different
+‘motif’ models. In these models, alignments consist of one
+or more ungapped blocks, separated by intervening se-
+quences that are assumed to be random (Figure 3). The
+handling of these gaps in BLOCKS is ad hoc. PROBE and
+META-MEME adopt probabilistic models for the gaps.
+META-MEME, interestingly, fits its models into HMMER
+format. The motif models can therefore be viewed as special
+cases of profile HMMs; indeed, HMMER, SAM and
+PFTOOLS have various options for creating motif-like mo-
+dels. The strength here is that by limiting the freedom of the
+model a priori, the HMM training problem is made more
+tractable. These approaches can be very powerful for dis-
+covering conserved motifs in initially unaligned sets of se-
+quences. PROBE, for instance, has been turned loose on a
+fully automated exercise in identifying domain families in
+the current protein database starting with single randomly
+selected query sequences, with impressive results (Neuwald
+et al., 1997).
+GENEWISE is a sophisticated ‘framesearch’ application
+that can take a HMMER protein model and search it against
+EST or genomic DNA, allowing for frameshifts, introns and
+sequencing errors (Birney and Durbin, 1997).
+PSI-BLAST (Altschul et al., 1997) is not an HMM ap-
+plication per se, but it uses some principles of full probabilis-
+tic modeling to build HMM-like models from multiple align-
+ments. Like the use of PROBE (Neuwald et al., 1997), PSI-
+BLAST starts from a single query sequence and collects
+homologous sequences by BLAST search. These homo-
+logues are aligned to the query. An HMM-like search model
+is built from the multiple alignment. The model is searched
+against the database, new homologues are discovered and
+added to the alignment, and a new model is built. The process
+is iterated until no new homologues are discovered. PROBE
+and PSI-BLAST both illustrate the power of automating it-
+erative profile searches. The remarkable speed of PSI-
+BLAST also demonstrates that the fast BLAST algorithm
+can be applied to position-specific scoring systems and
+gapped alignments, and hence to profile HMMs.
+With the exception of PSI-BLAST, profile HMM search
+algorithms are computationally demanding. Fast hardware
+implementations of Gribskov profile searches (Gribskov et
+al., 1987) are available from several manufacturers, includ-
+ing Compugen and Time Logic. These systems are currently
+being revised to accommodate profile HMMs and the exist-
+ing PROSITE and PFAM HMM libraries. HMM approaches
+are also readily parallelized (Grundy et al., 1996; Hughey,
+1996). Even more esoteric speed-ups are also possible. For
+instance, Intel Corporation has made a white paper available
+on using MMX assembly instructions to parallelize the Viter-
+bi algorithm and get about a 2-fold speed increase on Intel
+hardware (http://developer.intel.com/drg/mmx/AppNotes/
+AP569.HTM). This could be significant, since some of the
+WWW-based HMM servers are backed by Intel processor
+farms running Linux or FreeBSD, such as the ISREC/Prosite
+INSECT farm (Jongeneel et al., 1998).
+Profile HMM libraries
+Profile HMM software is well suited for modeling a particular
+sequence family of interest and finding additional remote homo-
+logues in a sequence database. Suppose instead that I have a
+query sequence of interest, and I am interested in whether this
+sequence contains one or more known domains. This problem
+arises especially in high-throughput genome sequence analysis,
+where standard ‘top hit’ BLAST analyses can be confused by
+proteins with several distinct domains. Now I need to search the
+single query sequence against a library of profile HMMs, rather
+than a single profile HMM against a database of sequences.
+S.R.Eddy
+760
+Building a library of profile HMMs in turn requires a large
+number of multiple alignments of common protein domains.
+A database of annotated multiple alignments and pre-built
+profile HMMs becomes desirable.
+Two large collections of annotated profile HMMs are cur-
+rently available: the Pfam database (Sonnhammer et al., 1997,
+1998) and the PROSITE Profiles database (Bairoch et al.,
+1997). The PROSITE Profiles database is a supplement to the
+widely used PROSITE motifs database; for families that can-
+not be recognized by simple PROSITE motif patterns (regular
+expressions which either match a sequence or do not), more
+sensitive profile HMMs are developed. Both databases are
+available via WWW servers, including on-line analysis
+servers for submitting protein sequence queries (Table 2). A
+new European Union funded initiative, called Interpro, has
+established a collaboration among several sites interested in
+effective protein domain annotation, including the Pfam,
+PROSITE and PRINTS development teams as well as the
+SWISS-PROT/TREMBL team.
+The current pre-release of the PROSITE Profiles database
+contains profiles for 290 protein domains, and the current
+Pfam 3.1 release contains 1313 profiles. There is substantial
+overlap between the two collections. It is not meaningful to try
+to estimate how complete these databases are, because the
+number of protein families in nature is unknown and probably
+very large. Although there is much discussion of how many
+protein families there are—the number 1000 is often cited
+(Chothia, 1992)—such estimates typically make a false as-
+sumption that all families have approximately equal numbers
+of members (Orengo et al., 1994). However, a small number
+of families (such as protein kinases, G-protein coupled recep-
+tors and immunoglobulin superfamily domains) account for
+a disproportionate number of sequences. The two databases
+are therefore seeing diminishing returns as models of less
+populous families are developed. For example, the 175 mo-
+dels in Pfam 1.0 recognize one or more domains in ∼27% of
+predicted proteins from the Caenorhabditis elegans genome
+project, the 527 models in Pfam 2.0 recognize ∼35% and the
+806 models in Pfam 3.0 recognize ∼42% (S.R.E. unpublished
+data). Thus, an ∼5-fold increase in Pfam database size (175 to
+806) resulted in only about a 50% increase in the number of
+sequences recognized with significant scores. On the bright
+side, the number of C.elegans sequences annotated by one or
+more Pfam models is starting to approach the number that is
+hit by one or more informative BLAST similarities to the non-
+redundant sequence database (42% compared to ∼55%).
+None of the profile servers is mature. Both profile software
+and profile databases are rapidly improving and changing. In
+particular, profile databases typically include domain models
+that other databases may not yet have. Users are well advised
+to search several domain annotation servers. The Interpro col-
+laboration is expected to be extremely valuable as the various
+database teams begin actively sharing alignment and annota-
+tion data.
+HMMs for fold recognition
+Profile HMMs are sometimes viewed as ‘mere sequence mo-
+dels’. However, profile scores can be calculated from struc-
+tural data instead of sequences, e.g. ‘3D/1D profiles’ (Bowie
+et al., 1991; Luthy et al., 1992). These structural profile ap-
+proaches can readily be put into a full probabilistic, HMM-
+based framework (Stultz et al., 1993; White et al., 1994). Di
+Francesco and colleagues have used profile HMMs to model
+secondary structure symbol sequences by modifying the
+SAM code to emit an alphabet of protein secondary structure
+symbols, training models on known secondary structures,
+and aligning these models to secondary structure predictions
+of new protein sequences (Di Francesco et al., 1997a,b).
+The pejorative appellation of ‘mere sequence models’
+seems to be applied to HMMs based on a misunderstanding
+of the central assumption of position independence in
+HMMs. Obviously, neighboring three-dimensional struc-
+tural contacts influence the types of residue that will be ac-
+cepted at any given position in a protein structure. How can
+HMMs that explicitly assume position independence hope to
+be a realistic model of protein structure?
+Table 2. WWW analysis servers for analyzing protein sequences for known domains 
+Profile HMM libraries:
+Pfam (Sonnhammer et al., 1998)
+http://www.sanger.ac.uk/Pfam/
+PROSITE profiles (Bairoch et al., 1997)
+http://ulrec3.unil.ch/software/PFSCAN_form.html
+HMM-like methods:
+BLOCKS (Henikoff et al., 1998)
+http://www.blocks.fhcrc.org/
+Other protein domain family classification servers:
+PRINTS (Attwood et al., 1998)
+http://www.biochem.ucl.ac.uk/bsm/dbbrowser/PRINTS/
+ProClass (Wu et al., 1996)
+http://diana.uthct.edu/proclass.html
+PRODOM (Corpet et al., 1998)
+http://www.toulouse.inra.fr/prodom.html
+SBASE (Fabian et al., 1997)
+http://base.icgeb.trieste.it/sbase/
+Profile hidden Markov models
+761
+The assumption of position independence only means that
+when an HMM state scores a residue in a sequence, it does
+so independently of the rest of that sequence’s alignment.
+However, nothing says that the emission probability distribu-
+tion at that state cannot be determined in the first place from
+complex three-dimensional structural knowledge of the
+training set. If I know that a residue is buried by spatially
+neighboring hydrophobic residues, and this environment is
+approximately constant among related structures in the pro-
+tein family, I can build that knowledge into my model. What
+HMMs cannot deal with efficiently are long-distance cor-
+relations between residues, as is seen in RNA structural
+alignments, where the complementarity of a pair of distant
+sequence positions is more important than the identity of
+either position by itself (Durbin et al., 1998). (Short-distance
+correlation can be built into HMMs without much difficulty;
+for example, gene-finding HMMs typically model the prob-
+ability of coding hexamers instead of probabilities of single
+residues.)
+Many current fold recognition methods are not cast as
+HMMs, but instead as sequence/structure ‘threading’ algo-
+rithms with relatively ad hoc scores. However, any threading
+scoring system for which a dynamic programming algorithm
+can be used to find optimal sequence/structure alignments can
+be recast as a full probabilistic HMM. This includes ‘frozen
+approximation’ methods (Godzik et al., 1992), for instance.
+The fold recognition section of the CASP (Current Asses-
+sment of Structure Prediction) exercise (Moult et al., 1997)
+is one of the most interesting anecdotal benchmarks of how
+HMM techniques perform. In CASP, the sequences of pro-
+tein ‘prediction targets’ whose structures are soon to be
+solved by crystallography or NMR are made available to
+computational structure prediction groups. After the struc-
+tures become available, the success of the fold predictions is
+evaluated. Ranking the performance of different methods in
+CASP is difficult and somewhat subjective (Levitt, 1997).
+Also, there is usually a variable and sometimes substantial
+degree of expert human interpretation added to the auto-
+mated methods (Murzin and Bateman, 1997). Nonetheless,
+CASP has been a lively venue to explore the strengths and
+weaknesses of fold recognition methods. At CASP2 last
+year, HMM-based methods were among the techniques used
+by several of the most successful prediction groups (Di Fran-
+cesco et al., 1997; Karplus et al., 1997; Levitt, 1997; Murzin
+and Bateman, 1997). Indeed, Murzin and Bateman (1997)
+correctly predicted the folds of all six proteins they at-
+tempted, using a combination of profile HMMs, secondary
+structure prediction and expert knowledge.
+Conclusion
+The human genome project threatens to overwhelm us in a
+deluge of raw sequence data. Successful large-scale se-
+quence annotation is so difficult that some people almost
+seem ready to give up on it (Wheelan and Boguski, 1998).
+The development of robust methods for automated sequence
+classification and annotation is imperative. Our hope in de-
+veloping profile HMM methods is that we can provide a sec-
+ond tier of solid, sensitive, statistically based analysis tools
+that complement current BLAST and FASTA analyses. The
+combination of powerful new HMM software and large se-
+quence alignment databases of conserved protein domains
+should help make this hope a reality.
+Acknowledgements
+Work on profile HMMs and Pfam in my laboratory is sup-
+ported by NIH/NHGRI R01 HG01363, Monsanto and Eli
+Lilly. I thank D.States for pointing out the Intel paper on
+MMX Viterbi implementations; K.Karplus, R.Hughey and
+A.Neuwald for providing pre-publication results; and
+C.Eddy, S.Johnson, my research group and three anonymous
+reviewers for their useful criticism of the manuscript. I also
+thank the many people in the HMM community with whom
+I have discussed these issues, especially A.Krogh, P.Bucher,
+A.Neuwald, B.Grundy, G.Mitchison, the other members of
+the Pfam consortium (the R.Durbin and E.Sonnhammer
+groups), and the remarkable UC Santa Cruz HMM group.
+References
+Altschul,S.F. (1991) Amino acid substitution matrices from an
+information theoretic perspective. J. Mol. Biol., 219, 555–565.
+Altschul,S.F. and Gish,W. (1996) Local alignment statistics. Methods
+Enzymol., 266, 460–480.
+Altschul,S.F., Gish,W., Miller,W., Myers,E.W. and Lipman,D.J. (1990)
+Basic local alignment search tool. J. Mol. Biol., 215, 403–410.
+Altschul,S.F., Madden,T.L., Schaffer,A.A., Zhang,J., Zhang,Z.,
+Miller,W. and Lipman,D.J. (1997) Gapped BLAST and PSI-
+BLAST: A new generation of protein database search programs.
+Nucleic Acids Res., 25, 3389–3402.
+Asai,K., Hayamizu,S. and Handa,K. (1993) Prediction of protein
+secondary structure by the hidden Markov model. Comput. Applic.
+Biosci., 9, 141–146.
+Attwood,T.K., Beck,M.E., Flower,D.R., Scordis,P. and Selley,J.N.
+(1998) The PRINTS protein fingerprint database in its fifth year.
+Nucleic Acids Res., 26, 304–308.
+Bairoch,A., Bucher,P. and Hofmann,K. (1997) The PROSITE data-
+base, its status in 1997. Nucleic Acids Res., 25, 217–221.
+Baldi,P. and Brunak,S. (1998) Bioinformatics: The Machine Learning
+Approach. MIT Press, Boston.
+Baldi,P. and Chauvin,Y. (1996) Hybrid modeling, HMM/NN architec-
+tures and protein applications. Neural Comput., 8, 1541–1565.
+Baldi,P., Chauvin,Y., Hunkapiller,T. and McClure,M.A. (1994)
+Hidden Markov models of biological primary sequence informa-
+tion. Proc. Natl Acad. Sci. USA, 91, 1059–1063.
+Barrett,C., Hughey,R. and Karplus,K. (1997) Scoring hidden Markov
+models. Comput. Applic. Biosci., 13, 191–199.
+S.R.Eddy
+762
+Barton,G.J. (1990) Protein multiple sequence alignment and flexible
+pattern matching. Methods Enzymol., 183, 403–427.
+Birney,E. and Durbin,R. (1997) Dynamite: A flexible code generating
+language for dynamic programming methods used in sequence
+comparison. In Proceedings of the Fifth International Conference
+on Intelligent Systems in Molecular Biology, 5, 56–64. AAAI Press,
+Menlo Park.
+Bork,P. and Gibson,T.J. (1996) Applying motif and profile searches.
+Methods Enzymol., 266, 162–184.
+Bowie,J.U., Luthy,R. and Eisenberg,D. (1991) A method to identify
+protein sequences that fold into a known three-dimensional
+structure. Science, 253, 164–170.
+Bruno,W.J. (1996) Modeling residue usage in aligned protein se-
+quences via maximum likelihood. Mol. Biol. Evol., 13, 1368–1374.
+Bucher,P., Karplus,K., Moeri,N. and Hofmann,K. (1996) A flexible
+motif search technique based on generalized profiles. Comput.
+Chem., 20, 3–23.
+Burge,C. and Karlin,S. (1997) Prediction of complete gene structures
+in human genomic DNA. J. Mol. Biol., 268, 78–94.
+Chothia,C. (1992) One thousand families for the molecular biologist.
+Nature, 357, 543–544.
+Churchill,G.A. (1989) Stochastic models for heterogeneous DNA
+sequences. Bull. Math. Biol., 51, 79–94.
+Corpet,F., Gouzy,J. and Kahn,D. (1998) The ProDom database of
+protein domain families. Nucleic Acids Res., 26, 323–326.
+Di Francesco,V., Garnier,J. and Munson,P.J. (1997a) Protein topology
+recognition from secondary structure sequences: Application of the
+hidden Markov models to the alpha class proteins. J. Mol. Biol., 267,
+446–463.
+Di Francesco,V., Geetha,V., Garnier,J. and Munson,P.J. (1997b) Fold
+recognition using predicted secondary structure sequences and
+hidden Markov models of protein folds. Proteins, 1(Suppl.),
+123–128.
+Durbin,R., Eddy,S.R., Krogh,A. and Mitchison,G.J. (1998) Biological
+Sequence Analysis: Probabilistic Models of Proteins and Nucleic
+Acids. Cambridge University Press, Cambridge, UK.
+Eddy,S.R. (1996) Hidden Markov models. Curr. Opin. Struct. Biol., 6,
+361–365.
+Fabian,P., Murvai,J., Vlahovicek,K., Hegyi,H. and Pongor,S. (1997)
+The SBASE protein domain library, release 5.0: A collection of
+annotated protein sequence segments. Nucleic Acids Res., 25,
+240–243.
+Felsenstein,J. and Churchill,G. (1996) A hidden Markov model
+approach to variation among sites in rate of evolution. Mol. Biol.
+Evol., 13, 93–104.
+Godzik,A., Kolinski,A. and Skolnick,J. (1992) Topology fingerprint
+approach to the inverse protein folding problem. J. Mol. Biol., 227,
+227–238.
+Goldman,N., Thorne,J.L. and Jones,D.T. (1996) Using evolutionary
+trees in protein secondary structure prediction and other compara-
+tive sequence analyses. J. Mol. Biol., 263, 196–208.
+Gribskov,M., McLachlan,A.D. and Eisenberg,D. (1987) Profile analy-
+sis: Detection of distantly related proteins. Proc. Natl Acad. Sci.
+USA, 84, 4355–4358.
+Grundy,W.N., Bailey,T.L. and Elkan,C.P. (1996) ParaMEME: A
+parallel implementation and a web interface for a DNA and protein
+motif discovery tool. Comput. Applic. Biosci., 12, 303–310.
+Grundy,W.N., Bailey,T.L., Elkan,C.P. and Baker,M.E. (1997) Meta-
+MEME: Motif-based hidden Markov models of protein families.
+Comput. Applic. Biosci., 13, 397–406.
+Henderson,J., Salzberg,S. and Fasman,K. (1997) Finding genes in
+human DNA with a hidden Markov model. J. Comput. Biol., 4,
+127–141.
+Henikoff,S. (1996) Scores for sequence searches and alignments. Curr.
+Opin. Struct. Biol., 6, 353–360.
+Henikoff,S. and Henikoff,J.G. (1992) Amino acid substitution ma-
+trices from protein blocks. Proc. Natl Acad. Sci. USA, 89,
+10915–10919.
+Henikoff,S., Greene,E.A., Pietrokovski,S., Bork,P., Attwood,T.K. and
+Hood,L. (1997) Gene families: The taxonomy of protein paralogs
+and chimeras. Science, 278, 609–614.
+Henikoff,S., Pietrokovski,S. and Henikoff,J.G. (1998) Superior per-
+formance in protein homology detection with the Blocks database
+servers. Nucleic Acids Res., 26, 309–312.
+Hughey,R. (1996) Parallel hardware for sequence comparison and
+alignment. Comput. Applic. Biosci., 12, 473–479.
+Hughey,R. and Krogh,A. (1996) Hidden Markov models for sequence
+analysis: Extension and analysis of the basic method. Comput.
+Applic. Biosci., 12, 95–107.
+Jaynes,E.T. (1998) Probability Theory: The Logic of Science.
+Available from http://bayes.wustl.edu.
+Jongeneel,V., Junier,T., Iseli,C., Hofmann,K. and Bucher,P. (1998)
+INSECT and MOLLUSCS—supercomputing on the cheap. Avail-
+able from http:// cmpteam4.unil.ch/biocomputing/mollusc/ IN-
+SECT_and_MOLLUSCS.html.
+Karchin,R. and Hughey,R. (1998) Weighting hidden Markov models
+for maximum discrimination. Bioinformatics, in press.
+Karplus,K., 
+Sjolander,K., 
+Barrett,C., 
+Cline,M., 
+Haussler,D.,
+Hughey,R., Holm,L. and Sander,C. (1997) Predicting protein
+structure using hidden Markov models. Proteins, 1(Suppl.),
+134–139.
+Krogh,A. (1997) Two methods for improving performance of an
+HMM and their application for gene finding. In Proceedings of the
+Fifth International Conference on Intelligent Systems in Molecular
+Biology, 5, 179–186. AAAI Press, Menlo Park.
+Krogh,A. (1998) An introduction to hidden Markov models for
+biological sequences. In Salzberg,S., Searls,D. and Kasif,S. (eds),
+Computational Methods in Molecular Biology. Elsevier, New York.
+pp. 45–63.
+Krogh,A., Brown,M., Mian,I.S., Sjolander,K. and Haussler,D. (1994a)
+Hidden Markov models in computational biology: Applications to
+protein modeling. J. Mol. Biol., 235, 1501–1531.
+Krogh,A., Mian,I.S. and Haussler,D. (1994b) A hidden Markov model
+that finds genes in E.coli DNA. Nucleic Acids Res., 22, 4768–4778.
+Kruglyak,L., Daly,M.J., Reeve-Daly,M.P. and Lander,E.S. (1996)
+Parametric and nonparametric linkage analysis: A unified multi-
+point approach. Am. J. Hum. Genet., 58, 1347–1363.
+Kulp,D., Haussler,D., Reese,M.G. and Eeckman,F.H. (1996) A
+generalized hidden Markov model for the recognition of human
+genes in DNA. In Proceedings of the Fourth International
+Conference on Intelligent Systems in Molecular Biology, 4,
+134–141. AAAI Press, Menlo Park.
+Levitt,M. (1997) Competitive assessment of protein fold recognition
+and alignment accuracy. Proteins, 1(Suppl.), 92–104.
+Profile hidden Markov models
+763
+Lukashin,A.V. and Borodovsky,M. (1998) GeneMark.hmm: New
+solutions for gene finding. Nucleic Acids Res., 26, 1107–1115.
+Luthy,R., Bowie,J.U. and Eisenberg,D. (1992) Assessment of protein
+models with three-dimensional profiles. Nature, 356, 83–85.
+Mamitsuka,H. (1996) A learning method of hidden Markov models for
+sequence discrimination. J. Comput. Biol., 3, 361–373.
+Moult,J., Hubbard,T., Bryant,S.H., Fidelis,K. and Pedersen,J.T. (1997)
+Critical assessment of methods of protein structure prediction
+(CASP): Round II. Proteins, 1(Suppl.), 2–6.
+Murzin,A.G. and Bateman,A. (1997) Distant homology recognition
+using structural classification of proteins. Proteins, 1(Suppl.),
+105–112.
+Neuwald,A.F., Liu,J.S., Lipman,D.J. and Lawrence,C.E. (1997) Ex-
+tracting protein alignment models from the sequence database.
+Nucleic Acids Res., 25, 1665–1677.
+Orengo,C., Jones,D.T. and Thornton,J.M. (1994) Protein superfamilies
+and domain superfolds. Nature, 372, 631–634.
+Pearson,W. and Lipman,D. (1988) Improved tools for biological
+sequence comparison. Proc. Natl Acad. Sci. USA, 85, 2444–2448.
+Rabiner,L.R. (1989) A tutorial on hidden Markov models and selected
+applications in speech recognition. Proc. IEEE, 77, 257–286.
+Rost,B. and Sander,C. (1993) Prediction of protein secondary structure
+at better than 70% accuracy. J. Mol. Biol., 232, 584–599.
+Slonim,D., Kruglyak,L., Stein,L. and Lander,E. (1997) Building
+human genome maps with radiation hybrids. J. Comput. Biol., 4,
+487–504.
+Sjölander,K., Karplus,K., Brown,M., Hughey,R., Krogh,A., Mian,I.S.
+and Haussler,D. (1996) Dirichlet mixtures: A method for improving
+detection of weak but significant protein sequence homology.
+Comput. Applic. Biosci., 12, 327–345.
+Sonnhammer,E.L., Eddy,S.R. and Durbin,R. (1997) Pfam: A com-
+prehensive database of protein families based on seed alignments.
+Proteins, 28, 405–420.
+Sonnhammer,E.L.L., Eddy,S.R., Birney,E., Bateman,A. and Durbin,R.
+(1998) Pfam: Multiple sequence alignments and HMM-profiles of
+protein domains. Nucleic Acids Res., 26, 320–322.
+Stultz,C.M., White,J.V. and Smith,T.F. (1993) Structural analysis
+based on state-space modeling. Protein Sci., 2, 305–314.
+Sunyaev,S.R., Rodchenkov,I.V., Eisenhaber,F. and Kuznetsov,E.N.
+(1998) Analysis of the position dependent amino acid probabilities
+and its application to the search for remote homologues. In
+RECOMB ’98, pp. 258–265.
+Tarnas,C. and Hughey,R. (1998) Reduced space hidden Markov model
+training. Bioinformatics, in press.
+Taylor,W.R. (1986) Identification of protein sequence homology by
+consensus template alignment. J. Mol. Biol., 188, 233–258.
+Thorne,J.L., Goldman,N. and Jones,D.T. (1996) Combining protein
+evolution and secondary structure. Mol. Biol. Evol., 13, 666–673.
+Wheelan,S.J. and Boguski,M.S. (1998) Late-night thoughts on the
+sequence annotation problem. Genome Res., 8, 168–169.
+White,J.V., Stultz,C.M. and Smith,T.F. (1994) Protein classification by
+stochastic modeling and optimal filtering of amino-acid sequences.
+Math. Biosci., 119, 35–75.
+Wu,C.H., Zhao,S. and Chen,H.L. (1996) A protein class database
+organized with ProSite, protein groups and PIR, superfamilies. J.
+Comput. Biol., 3, 547–561.
+Yada,T., Ishikawa,M., Tanaka,H. and Asai,K. (1996) Extraction of
+hidden Markov model representations of signal patterns in DNA
+sequences. Pac. Symp. Biocomput., World Scientific, Singapore, pp.
+686–696.

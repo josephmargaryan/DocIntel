@@ -1,0 +1,1 @@
+The recent literature on profile hidden Markov model (profile HMM) methods and software is reviewed. HMM methods performed comparably to threading methods in the CASP2 prediction exercise.
