@@ -41,7 +41,7 @@ This project implements a Document Intelligence Pipeline capable of extracting t
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/yourusername/your-repo-name.git
+   git clone https://github.com/josephmargaryan/DocIntel.git
    cd DocIntel
    ```
 2. **Download Spcay**
