@@ -1,5 +1,3 @@
-# src/utils/logging.py
-
 import logging
 
 class Logger:
@@ -13,3 +11,6 @@ class Logger:
 
     def info(self, message: str):
         self.logger.info(message)
+
+    def error(self, message: str):  # Add this method
+        self.logger.error(message)

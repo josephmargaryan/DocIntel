@@ -9,6 +9,7 @@ from src.agents.qa_agent import QuestionAnsweringAgent
 from src.agents.summarization_agent import SummarizationAgent
 from src.agents.ner_agent import NERAgent
 from src.agents.table_extraction_agent import TableExtractionAgent
+from src.agents.formula_extraction_agent import FormulaExtractionAgent  # Import the new agent
 from src.document import Document
 from src.utils.logging import Logger
 
@@ -21,6 +22,7 @@ def process_documents(
     use_regex: bool = True,
     use_ner: bool = True,
     use_table: bool = True,
+    use_formula_extraction: bool = True,  # New parameter
     question: str = "What is the main topic of the document?",
     regex_pattern: str = r'\b[A-Z][a-z]+ [A-Z][a-z]+\b'  # Example pattern for names
 ):
@@ -36,6 +38,7 @@ def process_documents(
     - use_regex (bool): Whether to perform regex search.
     - use_ner (bool): Whether to perform named entity recognition.
     - use_table (bool): Whether to extract tables from PDFs.
+    - use_formula_extraction (bool): Whether to extract formulas and LaTeX code.
     - question (str): Question to ask in question answering.
     - regex_pattern (str): Regex pattern to search for.
 
@@ -77,6 +80,8 @@ def process_documents(
         agents['ner_agent'] = NERAgent()
     if use_table:
         agents['table_agent'] = TableExtractionAgent(logger=logger)
+    if use_formula_extraction:
+        agents['formula_agent'] = FormulaExtractionAgent(logger=logger)
 
     # Process each file with tqdm progress bar
     for file_name in tqdm(files, desc='Processing documents'):
@@ -179,6 +184,35 @@ def process_documents(
                         f.write(name + '\n')
                 logger.info(f'Person names saved to {ner_file_path}')
 
+            # Perform formula extraction
+            if use_formula_extraction:
+                formula_results = agents['formula_agent'].execute(document)
+                if formula_results:
+                    logger.info('Formula extraction executed.')
+
+                    # Create a subdirectory for formula LaTeX code (one file per document)
+                    formula_output_dir = os.path.join(document_output_dir, 'formulas')
+                    os.makedirs(formula_output_dir, exist_ok=True)
+
+                    # Save all LaTeX codes into one file
+                    latex_file_path = os.path.join(formula_output_dir, f"{folder_name}_formulas.tex")
+                    with open(latex_file_path, 'w', encoding='utf-8') as latex_file:
+                        for latex_code in formula_results:
+                            latex_file.write(latex_code + '\n\n')  # Append all LaTeX codes into one file
+                    logger.info(f'LaTeX codes saved to {latex_file_path}')
+                else:
+                    logger.info('No formulas extracted.')
+            else:
+                logger.info('Formula extraction not performed.')
+
+            # Delete temporary image directory
+            if document.image_paths:
+                temp_image_dir = os.path.dirname(document.image_paths[0])
+                if temp_image_dir and os.path.exists(temp_image_dir):
+                    import shutil
+                    shutil.rmtree(temp_image_dir)
+                    logger.info(f"Temporary images directory {temp_image_dir} deleted.")
+
             logger.info(f'Processing of {file_name} completed successfully.')
 
         except Exception as e:
@@ -198,6 +232,7 @@ if __name__ == '__main__':
         use_regex=True,
         use_ner=True,
         use_table=True,
+        use_formula_extraction=True,  # Enable formula extraction
         question="What is the main topic of the document?",
         regex_pattern=r'\b[A-Z][a-z]+ [A-Z][a-z]+\b'
     )
