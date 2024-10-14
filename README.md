@@ -25,6 +25,7 @@ This project implements a Document Intelligence Pipeline capable of extracting t
 - **Question Answering**: Answers questions based on the text or its summary.
 - **Named Entity Recognition**: Extracts named entities, specifically person names.
 - **Regex Matching**: Finds patterns in text using regular expressions.
+- **Formula extraction**: Extracts formulas and returns the equivalent latex code.
 - **Modular Design**: Easily extendable with additional agents and functionalities.
 
 
