@@ -1,2 +1,0 @@
-Question: What is the main topic of the document?
-Answer: Residue co-evolution

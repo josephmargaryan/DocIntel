@@ -1,5 +1,5 @@
 # src/scraper/file_scrapers.py
-
+import openpyxl
 import os
 import fitz  # PyMuPDF
 import docx
@@ -50,3 +50,28 @@ class ImageScraper(BaseScraper):
             return Document(text, file_path=filepath, image_paths=image_paths)
         else:
             raise ValueError("No OCR engine provided for image scraping.")
+        
+# src/scraper/excel_scraper.py
+
+import openpyxl
+from .base_scraper import BaseScraper
+from ..document import Document
+
+class ExcelScraper(BaseScraper):
+    def scrape(self, filepath: str) -> Document:
+        workbook = openpyxl.load_workbook(filepath, data_only=True) 
+        sheet = workbook.active
+        
+        # Initialize text to store extracted data
+        text = ""
+        
+        # Store data in rows for easy retrieval and CSV export
+        rows = []
+        
+        # Assume the data starts at row 4 (based on your example)
+        for row in sheet.iter_rows(min_row=4, values_only=True):
+            if row[0]:  # Assuming row[0] contains "Topic" or relevant data
+                text += ' '.join([str(cell) for cell in row if cell]) + "\n"
+                rows.append(row)
+
+        return Document(text, file_path=filepath, rows=rows)

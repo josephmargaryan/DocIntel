@@ -1,7 +1,6 @@
-# process_documents.py
-
 import os
 from tqdm import tqdm
+import pandas as pd
 from src.pipelines.pipeline import DocumentProcessingPipeline
 from src.agents.text_extraction_agent import TextExtractionAgent
 from src.agents.regex_agent import RegexAgent
@@ -56,7 +55,7 @@ def process_documents(
     os.makedirs(output_dir, exist_ok=True)
 
     # Supported file extensions
-    supported_extensions = ('.pdf', '.docx', '.png', '.jpg', '.jpeg')
+    supported_extensions = ('.pdf', '.docx', '.png', '.jpg', '.jpeg', '.xlsx')
 
     # Get a list of all files in the input directory
     files = [f for f in os.listdir(input_dir) if f.lower().endswith(supported_extensions)]
@@ -94,13 +93,33 @@ def process_documents(
             logger.info('Document processed successfully.')
 
             # Create a subfolder in output_results for this document
-            # Sanitize the file name to create a valid folder name
             folder_name = os.path.splitext(file_name)[0]
             folder_name = ''.join(c for c in folder_name if c.isalnum() or c in (' ', '_', '-')).rstrip()
             document_output_dir = os.path.join(output_dir, folder_name)
             os.makedirs(document_output_dir, exist_ok=True)
 
-            # Extract text
+            # Process Excel files specifically
+            if file_name.endswith('.xlsx'):
+                extracted_rows = document.rows
+                
+                # Save structured data to CSV
+                structured_data = []
+                for row in extracted_rows:
+                    structured_data.append({
+                        'Problem Statement': row[0],  # Assuming this corresponds to the problem statement
+                        'Max Point': row[1],
+                        'Point Award': row[2],
+                        'Comments': row[4]  # Based on your row structure example
+                    })
+                
+                # Convert to DataFrame and save as CSV
+                df = pd.DataFrame(structured_data)
+                csv_file_path = os.path.join(document_output_dir, f"{folder_name}_structured.csv")
+                df.to_csv(csv_file_path, index=False)
+                logger.info(f'Structured data saved to {csv_file_path}')
+                continue
+
+            # Extract text (for non-Excel documents)
             if use_text:
                 extracted_text = agents['text_agent'].execute(document)
                 logger.info('Text extracted.')
@@ -226,13 +245,13 @@ if __name__ == '__main__':
     process_documents(
         input_dir='input_documents',
         output_dir='output_results',
-        use_text=True,
-        use_summarization=True,
-        use_qa=True,
-        use_regex=True,
-        use_ner=True,
-        use_table=True,
-        use_formula_extraction=True,  # Enable formula extraction
+        use_text=False,
+        use_summarization=False,
+        use_qa=False,
+        use_regex=False,
+        use_ner=False,
+        use_table=False,
+        use_formula_extraction=False,  # Enable formula extraction
         question="What is the main topic of the document?",
         regex_pattern=r'\b[A-Z][a-z]+ [A-Z][a-z]+\b'
     )

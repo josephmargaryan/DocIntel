@@ -1,1 +1,0 @@
-Residue co-evolution has become the primary principle for estimating inter-residue distances. Most existing approaches adopt an indirect strategy. We report an end-to-end deep neural network, CopulaNet, to estimate residue co-Evolution directly from MSA.
