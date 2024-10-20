@@ -12,5 +12,9 @@ class Logger:
     def info(self, message: str):
         self.logger.info(message)
 
-    def error(self, message: str):  # Add this method
+    def error(self, message: str):
         self.logger.error(message)
+
+    def warning(self, message: str):  # Add this method
+        self.logger.warning(message)
+

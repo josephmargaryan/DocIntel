@@ -227,10 +227,15 @@ def process_documents(
             # Delete temporary image directory
             if document.image_paths:
                 temp_image_dir = os.path.dirname(document.image_paths[0])
-                if temp_image_dir and os.path.exists(temp_image_dir):
+                
+                # Ensure we're deleting the correct temp directory and not the input directory
+                if "temp_images" in temp_image_dir and os.path.exists(temp_image_dir):
                     import shutil
                     shutil.rmtree(temp_image_dir)
                     logger.info(f"Temporary images directory {temp_image_dir} deleted.")
+                else:
+                    logger.warning(f"Skipping deletion of {temp_image_dir} as it may not be a temp directory.")
+
 
             logger.info(f'Processing of {file_name} completed successfully.')
 
@@ -245,7 +250,7 @@ if __name__ == '__main__':
     process_documents(
         input_dir='input_documents',
         output_dir='output_results',
-        use_text=False,
+        use_text=True,
         use_summarization=False,
         use_qa=False,
         use_regex=False,
