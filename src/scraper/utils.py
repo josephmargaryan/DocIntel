@@ -2,9 +2,10 @@
 
 import re
 
+
 def clean_text(text: str) -> str:
     """
     Cleans up text using regular expressions.
     """
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"\s+", " ", text)
     return text.strip()

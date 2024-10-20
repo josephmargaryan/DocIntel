@@ -10,7 +10,7 @@ from src.agents.ner_agent import NERAgent
 from src.agents.table_extraction_agent import TableExtractionAgent
 from src.agents.formula_extraction_agent import (
     FormulaExtractionAgent,
-) 
+)
 from src.document import Document
 from src.utils.logging import Logger
 

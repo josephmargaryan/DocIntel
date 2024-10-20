@@ -10,6 +10,8 @@ from ..document import Document
 
 class PDFScraper(BaseScraper):
     def scrape(self, filepath: str) -> Document:
+        import fitz  # PyMuPDF
+
         doc = fitz.open(filepath)
         text = ""
         image_paths = []
@@ -18,6 +20,7 @@ class PDFScraper(BaseScraper):
             "temp_images", os.path.splitext(os.path.basename(filepath))[0]
         )
         os.makedirs(temp_image_dir, exist_ok=True)
+
         for page_num, page in enumerate(doc, start=1):
             text += page.get_text()
             # If page contains images, save them
@@ -27,13 +30,27 @@ class PDFScraper(BaseScraper):
                 base_image_name = f"image_page{page_num}_{img_index}.png"
                 image_path = os.path.join(temp_image_dir, base_image_name)
                 pix = fitz.Pixmap(doc, xref)
-                if pix.n - pix.alpha < 4:  # this is GRAY or RGB
-                    pix.save(image_path)
+
+                try:
+                    # Only log important actions
+                    if pix.n - pix.alpha < 4:  # this is GRAY or RGB
+                        pix.save(image_path)
+                    else:  # CMYK or unsupported, convert to RGB
+                        pix = fitz.Pixmap(fitz.csRGB, pix)
+                        pix.save(image_path)
+
                     image_paths.append(image_path)
-                    # If we need to perform OCR immediately, we can do it here
+
+                    # Perform OCR on the image if needed
                     if self.ocr_engine:
                         ocr_text = self.ocr_engine.perform_ocr(image_path)
                         text += ocr_text
+
+                except Exception as e:
+                    print(
+                        f"[ERROR] Error processing image {img_index} on page {page_num}: {e}"
+                    )
+
         doc.close()
         return Document(text, file_path=filepath, image_paths=image_paths)
 

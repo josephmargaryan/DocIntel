@@ -3,6 +3,7 @@
 import re
 from .base_agent import BaseAgent
 
+
 class RegexAgent(BaseAgent):
     def __init__(self, pattern: str):
         self.pattern = pattern

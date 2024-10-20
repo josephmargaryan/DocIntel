@@ -3,6 +3,7 @@
 from PIL import Image
 from ..ocr_engines.base_ocr import BaseOCREngine
 
+
 class OCRProcessor:
     def __init__(self, ocr_engine: BaseOCREngine):
         self.ocr_engine = ocr_engine

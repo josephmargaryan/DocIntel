@@ -4,6 +4,7 @@ import abc
 from ..document import Document
 from ..ocr_engines.base_ocr import BaseOCREngine
 
+
 class BaseScraper(abc.ABC):
     """
     Abstract base class for file scrapers.

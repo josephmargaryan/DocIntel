@@ -5,6 +5,7 @@ from ..ocr_engines.tesseract_ocr import TesseractOCREngine
 
 # src/pipelines/pipeline.py
 
+
 class DocumentProcessingPipeline:
     def __init__(self):
         self.ocr_engine = TesseractOCREngine()  # For image OCR
@@ -14,13 +15,13 @@ class DocumentProcessingPipeline:
         self.excel_scraper = ExcelScraper()  # Add ExcelScraper here
 
     def process(self, filepath: str):
-        if filepath.endswith('.pdf'):
+        if filepath.endswith(".pdf"):
             document = self.pdf_scraper.scrape(filepath)
-        elif filepath.endswith('.docx'):
+        elif filepath.endswith(".docx"):
             document = self.docx_scraper.scrape(filepath)
-        elif filepath.endswith(('.png', '.jpg', '.jpeg')):
+        elif filepath.endswith((".png", ".jpg", ".jpeg")):
             document = self.image_scraper.scrape(filepath)
-        elif filepath.endswith('.xlsx'):
+        elif filepath.endswith(".xlsx"):
             document = self.excel_scraper.scrape(filepath)  # Excel processing
         else:
             raise ValueError("Unsupported file format.")
